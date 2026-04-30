@@ -27,7 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd nodeapp
+          cd nodeapp/
           npm install
 
       - name: Create .env file
