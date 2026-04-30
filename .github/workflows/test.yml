@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environments:
-        description: Provide the environement
+        description: Provide the environment
         required: true
         default: development
         type: choice
@@ -15,34 +15,46 @@ on:
 jobs:
   Build:
     runs-on: [self-hosted, Linux]
-    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
 
     steps:
       - name: Clone the code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v3
 
       - name: Node setup
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v3
         with:
           node-version: 24
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          cd nodeapp
+          npm install
 
       - name: Create .env file
         run: |
+          cd nodeapp
           if [[ "${{ github.event.inputs.environments }}" == "development" ]]; then
-            echo "PORT=3000" >> .env.development
+            echo "PORT=3000" > .env.development
             echo "APP=GHA APP" >> .env.development
           else
-            echo "PORT=8080" >> .env.production
+            echo "PORT=8080" > .env.production
             echo "APP=GHA APP Prod" >> .env.production
           fi
 
-      - name: Run Application
+      - name: Run Application & Test
         run: |
+          cd nodeapp
+
+          if [[ "${{ github.event.inputs.environments }}" == "development" ]]; then
+            PORT=3000
+          else
+            PORT=8080
+          fi
+
           node server.js "${{ github.event.inputs.environments }}" &
           sleep 5
-          curl http://localhost:8080
-          curl http://localhost:8080/health
+
+          curl -f http://localhost:$PORT
+          curl -f http://localhost:$PORT/health
+
           pkill -f "node server.js"
