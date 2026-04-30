@@ -1,0 +1,48 @@
+name: Node Pipeline
+
+on: 
+  workflow_dispatch:
+    inputs:
+      environments:
+        description: Provide the environement
+        required: true
+        default: development
+        type: choice
+        options:
+          - development
+          - production
+
+jobs:
+  Build:
+    runs-on: [self-hosted, Linux]
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v6
+
+      - name: Node setup
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create .env file
+        run: |
+          if [[ "${{ github.event.inputs.environments }}" == "development" ]]; then
+            echo "PORT=3000" >> .env.development
+            echo "APP=GHA APP" >> .env.development
+          else
+            echo "PORT=8080" >> .env.production
+            echo "APP=GHA APP Prod" >> .env.production
+          fi
+
+      - name: Run Application
+        run: |
+          node server.js "${{ github.event.inputs.environments }}" &
+          sleep 5
+          curl http://localhost:8080
+          curl http://localhost:8080/health
+          pkill -f "node server.js"
